@@ -289,17 +289,18 @@ class Maze:
 
 #main
 #choose size of maze (maze is square size*size)
-size = 40 
+size = 20
     
 m =  Maze(size)
 
-fig = plt.figure()
+
+paths = m.ani_A_star()
+
+fig = plt.figure(figsize = (10.2,7.2))
 
 ax = fig.add_subplot(111)
 m.draw_maze(ax)
 plt.show(block=False)
-paths = m.ani_A_star()
-
 
 line, = ax.plot([], [], lw=3, color = 'green')
 
@@ -320,4 +321,5 @@ anim = animation.FuncAnimation(fig, animate, init_func=init,
 
 #anim.save('a_star.gif')
 plt.show()
+
 
