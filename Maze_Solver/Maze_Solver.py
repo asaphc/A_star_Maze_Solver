@@ -299,7 +299,7 @@ ax = fig.add_subplot(111)
 m.draw_maze(ax)
 plt.show(block=False)
 paths = m.ani_A_star()
-ax.set_title(len(paths))
+
 
 line, = ax.plot([], [], lw=3, color = 'green')
 
@@ -312,10 +312,12 @@ def animate(i):
     y = [pos % size + 0.5 for pos in list]
     x = [(pos - pos % size) / size + 0.5 for pos in list]
     line.set_data(x, y)
+    ax.set_title("Iteration number: {}\nTotal iterations: {}".format(i,len(paths)))
     return line,
 
 anim = animation.FuncAnimation(fig, animate, init_func=init,
                                frames=len(paths), interval=20,repeat = False, blit=True)
 
+#anim.save('a_star.gif')
 plt.show()
 
