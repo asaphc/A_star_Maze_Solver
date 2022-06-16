@@ -2,6 +2,7 @@ import numpy as np
 import random as rand
 import matplotlib.pyplot as plt
 from matplotlib import animation
+import matplotlib.patches as patches
 import math
 
 
@@ -60,9 +61,9 @@ class PQueue:
         if i==self.size:
             self.push((key,val))
         else:
-            if data[i][0] > key:
+            if self.data[i][0] > key:
                 flag = True
-                data[i][0] = key
+                self.data[i] = (key,self.data[i][1])
                 while i!=0 and key < self.data[perant(i)][0]:
                     self.swap(i,perant(i))
                     i = perant(i)
@@ -75,131 +76,142 @@ class PQueue:
 #maze class
 class Maze:
     def __init__(self,size: int):
+        
+        self.size= size
+        self.h_walls = np.array([True] * size*(size-1))
+        self.h_walls = np.reshape(self.h_walls, (size-1,size))
+        
+        self.v_walls = np.array([True] * size*(size-1))
+        self.v_walls = np.reshape(self.v_walls, (size,size-1))
 
+        self.all_walls = [self.h_walls,self.v_walls]
         
+        self.history = [[np.copy(self.all_walls[0]),np.copy(self.all_walls[1])]] 
         
-        maze = np.array([False]* size**2)
-        self.maze = np.reshape(maze,(size,size))
+        cells = np.array([False]* size**2)
+        cells = np.reshape(cells, (size,size))
 
-        
-
-        #create random maze using randomized prim algorithm
-        
         start = rand.choice(range(size**2))
+        row = int(start % size)
+        col = int((start-row)/size)
+        cells[row,col] = True
+        cell_walls = [(0,-1,0),(0,0,0),(1,0,-1),(1,0,0)]
         list = set()
-        col = int(start % size)
-        row = int((start -col)/size)
-        self.maze[row,col] = True
-        if col > 0 and not self.maze[row,col-1]:
-            list.add(row*size+col-1)
-        if col < size-1 and not self.maze[row,col+1]:
-            list.add(row*size+col+1)
-        if row < size-1 and not self.maze[row+1,col]:
-            list.add((row+1)*size+col)
-        if row > 0 and not self.maze[row-1,col]:
-            list.add((row-1)*size+col)
-        while len(list)>0:
-            cell = rand.sample(list,1)
-            cell = cell[0]
-            list.remove(cell)
-            count = 0
-            col = int(cell % size)
-            row = int((cell - col)/size)
-            if col > 0 and self.maze[row,col-1]:
-                count+=1
-            if col < size-1 and self.maze[row,col+1]:
-                count+=1
-            if row < size-1 and self.maze[row+1,col]:
-                count+=1
-            if row > 0 and self.maze[row-1,col]:
-                count+=1
-            if count==1:
-                self.maze[row,col] = True
-                if col > 0 and not self.maze[row,col-1]:
-                    list.add(row*size+col-1)
-                if col < size-1 and not self.maze[row,col+1]:
-                    list.add(row*size+col+1)
-                if row < size-1 and not self.maze[row+1,col]:
-                    list.add((row+1)*size+col)
-                if row > 0 and not self.maze[row-1,col]:
-                    list.add((row-1)*size+col)
+        for wall in cell_walls:
+            if row+wall[1]>=0 and col+wall[2]>=0:
+                list.add((0+wall[0],row+wall[1],col+wall[2]))
 
+        while len(list)>0:
+            n_wall = rand.sample(list,1)
+            n_wall = n_wall[0]
+            if cells[n_wall[1],n_wall[2]]==False:
+                row,col = n_wall[1],n_wall[2]
+                cells[row,col] = True
+                self.all_walls[n_wall[0]][n_wall[1],n_wall[2]] = False
+                self.history.append([np.copy(self.all_walls[0]),np.copy(self.all_walls[1])])
+                for  wall in cell_walls:
+                    if row+wall[1]>=0 and col+wall[2]>=0:
+                        list.add((0+wall[0],row+wall[1],col+wall[2])) 
+            elif n_wall[0]==0 and n_wall[1]+1 < size and cells[n_wall[1]+1,n_wall[2]]==False:
+                row,col = n_wall[1]+1,n_wall[2]
+                cells[row,col] = True
+                self.all_walls[n_wall[0]][n_wall[1],n_wall[2]] = False
+                self.history.append([np.copy(self.all_walls[0]),np.copy(self.all_walls[1])])
+                for  wall in cell_walls:
+                    if row+wall[1]>=0 and col+wall[2]>=0:
+                        list.add((0+wall[0],row+wall[1],col+wall[2]))
+            elif n_wall[0]==1 and n_wall[2]+1 < size and cells[n_wall[1],n_wall[2]+1]==False:
+                row,col = n_wall[1],n_wall[2]+1
+                cells[row,col] = True
+                self.all_walls[n_wall[0]][n_wall[1],n_wall[2]] = False
+                self.history.append([np.copy(self.all_walls[0]),np.copy(self.all_walls[1])])
+                for  wall in cell_walls:
+                    if row+wall[1]>=0 and col+wall[2]>=0:
+                        list.add((0+wall[0],row+wall[1],col+wall[2])) 
+            list.remove(n_wall)
+       
         #choose start and end points - not in a wall and in a distance of at leest 2
 
         self.start = rand.choice(range(size**2))
-        scol = int(self.start % len(self.maze[0]))
-        srow = int((self.start-scol) / len(self.maze[0]))
-        while not self.maze[srow,scol]:
-            self.start = rand.choice(range(size**2))
-            scol = int(self.start % len(self.maze[0]))
-            srow = int((self.start-scol) / len(self.maze[0]))
-
-
-
+        scol = int(self.start % self.size)
+        srow = int((self.start-scol) / self.size)
+       
         self.end = rand.choice(range(size**2))
 
-        ecol = int(self.end % len(self.maze[0]))
-        erow = int((self.end-ecol) / len(self.maze[0]))
+        ecol = int(self.end % self.size)
+        erow = int((self.end-ecol) / self.size)
 
-        while abs(ecol - scol)+abs(erow - srow) <2 or not self.maze[erow,ecol]:
+        while abs(ecol - scol)+abs(erow - srow) <2:
             self.end = rand.choice(range(size**2))
         
-            ecol = int(self.end % len(self.maze[0]))
-            erow = int((self.end-ecol) / len(self.maze[0]))
+            ecol = int(self.end % self.size)
+            erow = int((self.end-ecol) / self.size)
         
     
 
     def draw_maze(self, ax):
         ax.clear()
 
-        ax.axis([0,len(self.maze[0]),0,len(self.maze)])
-    
-        for row in range(len(self.maze)):
-            for col in range(len(self.maze[0])):
-                if not self.maze[row,col]:
-                    ax.add_patch(plt.Rectangle((row, col), 1, 1))
+        ax.axis([0,self.size,0,self.size])
 
-        scol = int(self.start % len(self.maze[0]))
-        srow = int((self.start-scol) / len(self.maze[0]))
+        WALL_SIZE = 0.1
+        for row in range(self.size-1):
+            for col in range(self.size-1):
+                ax.add_patch(patches.Rectangle((col+1-WALL_SIZE/2,row+1-WALL_SIZE/2), WALL_SIZE, WALL_SIZE, edgecolor = None, fc='b'))
 
-        ecol = int(self.end % len(self.maze[0]))
-        erow = int((self.end-ecol) / len(self.maze[0]))
+        #vertical walls
+        for row in range(size-1,-1,-1):
+            for col in range(size-1):
+                if self.all_walls[1][size-row-1,col]:
+                    ax.add_patch(patches.Rectangle((col+1-WALL_SIZE/2,row+WALL_SIZE/2), WALL_SIZE, 1-WALL_SIZE, edgecolor = None, fc='b'))
 
-        ax.add_patch(plt.Rectangle((srow, scol), 1, 1, color = 'red'))
-        ax.add_patch(plt.Rectangle((erow, ecol), 1, 1, color = 'black'))
+        #horizontal walls
+        for row in range(size,1,-1):
+            for col in range(size):
+                 if self.all_walls[0][size-row,col]:
+                   ax.add_patch(patches.Rectangle((col+WALL_SIZE/2,row-1-WALL_SIZE/2), 1-WALL_SIZE, WALL_SIZE, edgecolor = None, fc='b'))
+        
+        scol = int(self.start % self.size)
+        srow = int((self.start-scol) / self.size)
+
+        ecol = int(self.end % self.size)
+        erow = int((self.end-ecol) / self.size)
+        ax.add_patch(patches.Circle((scol+0.5,self.size-srow-0.5), 0.2, edgecolor = None, fc='black'))
+        ax.add_patch(patches.Circle((ecol+0.5,self.size-erow-0.5), 0.2, edgecolor = None, fc='g'))
+      
 
 
     # a reguler A* returns a single solution
     # uses manhattan distance as huristic
     def A_star(self):
         def h(pos1, pos2):
-            scol = int(pos1 % len(self.maze[0]))
-            srow = int((pos1-scol) / len(self.maze[0]))
+            scol = int(pos1 % self.size)
+            srow = int((pos1-scol) / self.size)
 
-            ecol = int(pos2 % len(self.maze[0]))
-            erow = int((pos2-scol) / len(self.maze[0]))
+            ecol = int(pos2 % self.size)
+            erow = int((pos2-scol) / self.size)
 
             return abs(scol - ecol)+abs(srow - erow)
     
         q = PQueue()
-        explored = [False] * len(self.maze[0])**2
-        path = [0] * len(self.maze[0])**2
-        dist = [math.inf] * len(self.maze[0])**2
+        explored = [False] * self.size**2
+        path = [0] * self.size**2
+        dist = [math.inf] * self.size**2
 
         dist[self.start] = 0
 
-        scol = int(self.start % len(self.maze[0]))
-        srow = int((self.start-scol) / len(self.maze[0]))
+        scol = int(self.start % self.size)
+        srow = int((self.start-scol) / self.size)
 
-        ecol = int(self.end % len(self.maze[0]))
-        erow = int((self.end-ecol) / len(self.maze[0]))
+        ecol = int(self.end % self.size)
+        erow = int((self.end-ecol) / self.size)
 
         q.push((h(self.start, self.end), self.start))
 
         while not q.isEmpty():
             pos = q.pop()
-            col = int(pos % len(self.maze[0]))
-            row = int((pos-col) / len(self.maze[0]))
+            col = int(pos % self.size)
+            row = int((pos-col) / self.size)
             explored[pos] = True
             if pos==self.end:
                 best = [self.end]
@@ -210,44 +222,44 @@ class Maze:
                 dist[pos-1] = dist[pos]+1
                 q.update(pos-1,dist[pos-1] + h(pos-1, self.end))
                 path[pos-1]= pos
-            if col < len(self.maze[0])-1 and self.maze[row,col+1] and not explored[pos+1] and dist[pos+1] > dist[pos]+1:
+            if col < self.size-1 and self.maze[row,col+1] and not explored[pos+1] and dist[pos+1] > dist[pos]+1:
                 dist[pos+1] = dist[pos]+1
                 q.update(pos+1,dist[pos+1] + h(pos+1, self.end))
                 path[pos+1]= pos
-            if row < len(self.maze)-1 and self.maze[row+1,col] and not explored[pos+len(self.maze[0])] and dist[pos+len(self.maze[0])] > dist[pos]+1:
-                dist[pos+len(self.maze[0])] = dist[pos]+1
-                q.update(pos+len(self.maze[0]),dist[pos+len(self.maze[0])] + h(pos+len(self.maze[0]), self.end))
-                path[pos+len(self.maze[0])]= pos
-            if row > 0 and self.maze[row-1,col] and not explored[pos-len(self.maze[0])] and dist[pos-len(self.maze[0])] > dist[pos]+1:
-                dist[pos-len(self.maze[0])] = dist[pos]+1
-                q.update(pos-len(self.maze[0]),dist[pos-len(self.maze[0])] + h(pos-len(self.maze[0]), self.end))
-                path[pos-len(self.maze[0])]= pos
+            if row < self.size-1 and self.maze[row+1,col] and not explored[pos+self.size] and dist[pos+self.size] > dist[pos]+1:
+                dist[pos+self.size] = dist[pos]+1
+                q.update(pos+self.size,dist[pos+self.size] + h(pos+self.size, self.end))
+                path[pos+self.size]= pos
+            if row > 0 and self.maze[row-1,col] and not explored[pos-self.size] and dist[pos-self.size] > dist[pos]+1:
+                dist[pos-self.size] = dist[pos]+1
+                q.update(pos-self.size,dist[pos-self.size] + h(pos-self.size, self.end))
+                path[pos-self.size]= pos
         a  = True
         return []
 
     # A* for animation, returns all paths checked along the way
     def ani_A_star(self):
         def h(pos1, pos2):
-            scol = int(pos1 % len(self.maze[0]))
-            srow = int((pos1-scol) / len(self.maze[0]))
+            scol = int(pos1 % self.size)
+            srow = int((pos1-scol) / self.size)
 
-            ecol = int(pos2 % len(self.maze[0]))
-            erow = int((pos2-scol) / len(self.maze[0]))
+            ecol = int(pos2 % self.size)
+            erow = int((pos2-scol) / self.size)
 
             return abs(scol - ecol)+abs(srow - erow)
     
         q = PQueue()
-        explored = [False] * len(self.maze[0])**2
-        path = [0] * len(self.maze[0])**2
-        dist = [math.inf] * len(self.maze[0])**2
+        explored = [False] * self.size**2
+        path = [0] * self.size**2
+        dist = [math.inf] * self.size**2
         history = []
         dist[self.start] = 0
 
-        scol = int(self.start % len(self.maze[0]))
-        srow = int((self.start-scol) / len(self.maze[0]))
+        scol = int(self.start % self.size)
+        srow = int((self.start-scol) / self.size)
 
-        ecol = int(self.end % len(self.maze[0]))
-        erow = int((self.end-ecol) / len(self.maze[0]))
+        ecol = int(self.end % self.size)
+        erow = int((self.end-ecol) / self.size)
 
         q.push((h(self.start, self.end), self.start))
 
@@ -259,8 +271,8 @@ class Maze:
                 ani_path.insert(0,path[ani_path[0]])
             history.append(ani_path)
         
-            col = int(pos % len(self.maze[0]))
-            row = int((pos-col) / len(self.maze[0]))
+            col = int(pos % self.size)
+            row = int((pos-col) / self.size)
             explored[pos] = True
             if pos==self.end:
                 best = [self.end]
@@ -268,41 +280,41 @@ class Maze:
                     best.insert(0,path[best[0]])
                 history.append(best)
                 return history
-            if col > 0 and self.maze[row,col-1] and not explored[pos-1] and dist[pos-1] > dist[pos]+1:
+            if col > 0 and not self.all_walls[1][row,col-1] and not explored[pos-1] and dist[pos-1] > dist[pos]+1:
                 dist[pos-1] = dist[pos]+1
                 q.update(pos-1,dist[pos-1] + h(pos-1, self.end))
                 path[pos-1]= pos
-            if col < len(self.maze[0])-1 and self.maze[row,col+1] and not explored[pos+1] and dist[pos+1] > dist[pos]+1:
+            if col < self.size-1 and not self.all_walls[1][row,col] and not explored[pos+1] and dist[pos+1] > dist[pos]+1:
                 dist[pos+1] = dist[pos]+1
                 q.update(pos+1,dist[pos+1] + h(pos+1, self.end))
                 path[pos+1]= pos
-            if row < len(self.maze)-1 and self.maze[row+1,col] and not explored[pos+len(self.maze[0])] and dist[pos+len(self.maze[0])] > dist[pos]+1:
-                dist[pos+len(self.maze[0])] = dist[pos]+1
-                q.update(pos+len(self.maze[0]),dist[pos+len(self.maze[0])] + h(pos+len(self.maze[0]), self.end))
-                path[pos+len(self.maze[0])]= pos
-            if row > 0 and self.maze[row-1,col] and not explored[pos-len(self.maze[0])] and dist[pos-len(self.maze[0])] > dist[pos]+1:
-                dist[pos-len(self.maze[0])] = dist[pos]+1
-                q.update(pos-len(self.maze[0]),dist[pos-len(self.maze[0])] + h(pos-len(self.maze[0]), self.end))
-                path[pos-len(self.maze[0])]= pos
+            if row < self.size-1 and not self.all_walls[0][row,col] and not explored[pos+self.size] and dist[pos+self.size] > dist[pos]+1:
+                dist[pos+self.size] = dist[pos]+1
+                q.update(pos+self.size,dist[pos+self.size] + h(pos+self.size, self.end))
+                path[pos+self.size]= pos
+            if row > 0 and not self.all_walls[0][row-1,col] and not explored[pos-self.size] and dist[pos-self.size] > dist[pos]+1:
+                dist[pos-self.size] = dist[pos]+1
+                q.update(pos-self.size,dist[pos-self.size] + h(pos-self.size, self.end))
+                path[pos-self.size]= pos
         a  = True
         return history
 
 #main
 #choose size of maze (maze is square size*size)
-size = 20
+size = 40
     
 m =  Maze(size)
 
 
 paths = m.ani_A_star()
 
-fig = plt.figure(figsize = (10.2,7.2))
+fig = plt.figure(figsize = (7.2,7.2))
 
 ax = fig.add_subplot(111)
 m.draw_maze(ax)
 plt.show(block=False)
 
-line, = ax.plot([], [], lw=3, color = 'green')
+line, = ax.plot([], [], lw=3, color = 'red')
 
 def init():
     line.set_data([], [])
@@ -310,8 +322,8 @@ def init():
 
 def animate(i):
     list = paths[i % len(paths)] 
-    y = [pos % size + 0.5 for pos in list]
-    x = [(pos - pos % size) / size + 0.5 for pos in list]
+    x = [(pos % size) + 0.5 for pos in list]
+    y = [size- ((pos - pos % size) / size) - 0.5 for pos in list]
     line.set_data(x, y)
     ax.set_title("Iteration number: {}\nTotal iterations: {}".format(i,len(paths)))
     return line,
@@ -319,7 +331,7 @@ def animate(i):
 anim = animation.FuncAnimation(fig, animate, init_func=init,
                                frames=len(paths), interval=20,repeat = False, blit=True)
 
-#anim.save('a_star.gif')
+anim.save('a_star.gif')
 plt.show()
 
 
